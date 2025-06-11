@@ -15,7 +15,7 @@ import (
 // TestMain sets up and tears down test environment
 func TestMain(m *testing.M) {
 	// Build the binary for testing
-	cmd := exec.Command("go", "build", "-o", "newestfiles_test_binary", ".")
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", "newestfiles_test_binary", ".")
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Failed to build test binary: %v\n", err)
 		os.Exit(1)

@@ -15,7 +15,7 @@ build: $(BUILD_DIR)/$(BINARY_NAME)
 
 $(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES)
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+	go build -buildvcs=false -o $(BUILD_DIR)/$(BINARY_NAME) .
 
 # Run tests
 .PHONY: test
@@ -45,7 +45,7 @@ check: fmt vet test
 # Install the binary to GOPATH/bin
 .PHONY: install
 install:
-	go install .
+	go install -buildvcs=false .
 
 # Clean build artifacts
 .PHONY: clean
