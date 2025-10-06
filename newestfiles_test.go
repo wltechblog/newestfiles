@@ -30,18 +30,20 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// createTestFiles creates test files with specific modification times
+// createTestFiles creates test files with specific modification times and sizes
 func createTestFiles(t *testing.T, dir string) {
 	files := []struct {
 		name    string
 		content string
 		age     time.Duration // how old the file should be
 	}{
-		{"newest.go", "package main", 0},                 // newest
-		{"middle.txt", "hello world", time.Hour},         // middle
-		{"oldest.md", "# README", 2 * time.Hour},         // oldest
-		{"other.py", "print('hello')", 30 * time.Minute}, // should not match .go/.txt/.md
-		{"another.go", "// comment", 45 * time.Minute},   // second newest .go
+		{"newest.go", "package main", 0},                                                 // newest, small size
+		{"middle.txt", "hello world", time.Hour},                                         // middle age, medium size
+		{"oldest.md", "# README", 2 * time.Hour},                                        // oldest, small size
+		{"other.py", "print('hello')", 30 * time.Minute},                                // should not match .go/.txt/.md
+		{"another.go", "// comment", 45 * time.Minute},                                   // second newest .go, small size
+		{"large.txt", strings.Repeat("This is a large file content. ", 100), time.Hour}, // large file
+		{"small.go", "//", 30 * time.Minute},                                            // very small file
 	}
 
 	now := time.Now()
@@ -87,10 +89,10 @@ func TestPlainTextOutput(t *testing.T) {
 	outputStr := strings.TrimSpace(string(output))
 	lines := strings.Split(outputStr, "\n")
 
-	// Should have 3 files (.go and .txt files)
-	expectedFiles := []string{"newest.go", "another.go", "middle.txt"}
-	if len(lines) != len(expectedFiles) {
-		t.Errorf("Expected %d files, got %d. Output: %s", len(expectedFiles), len(lines), outputStr)
+	// Should have 5 files (.go and .txt files)
+	expectedCount := 5 // newest.go, another.go, small.go, middle.txt, large.txt
+	if len(lines) != expectedCount {
+		t.Errorf("Expected %d files, got %d. Output: %s", expectedCount, len(lines), outputStr)
 	}
 
 	// Check order (newest first)
@@ -129,8 +131,8 @@ func TestJSONOutput(t *testing.T) {
 		t.Fatalf("Failed to parse JSON output: %v. Output: %s", err, string(output))
 	}
 
-	// Should have 3 files (.go and .txt files)
-	expectedCount := 3
+	// Should have 5 files (.go and .txt files)
+	expectedCount := 5 // newest.go, another.go, small.go, middle.txt, large.txt
 	if len(files) != expectedCount {
 		t.Errorf("Expected %d files, got %d", expectedCount, len(files))
 	}
@@ -262,5 +264,131 @@ func TestCaseInsensitiveMatching(t *testing.T) {
 	// Should find all 3 files regardless of case
 	if len(lines) != 3 {
 		t.Errorf("Expected 3 files, got %d. Output: %s", len(lines), outputStr)
+	}
+}
+
+func TestOldestSorting(t *testing.T) {
+	// Create temporary directory
+	tmpDir, err := ioutil.TempDir("", "newestfiles_test_oldest")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create test files
+	createTestFiles(t, tmpDir)
+
+	// Change to test directory
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldDir)
+
+	// Run the program with -o flag
+	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"), "-o", ".go", ".txt")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to run program: %v", err)
+	}
+
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+
+	// Should have files sorted oldest first
+	// The oldest .go/.txt files should be first
+	if len(lines) > 0 && !strings.Contains(lines[0], "large.txt") && !strings.Contains(lines[0], "middle.txt") {
+		// One of the older files should be first
+		found := false
+		for _, line := range lines[:2] { // Check first two entries
+			if strings.Contains(line, "large.txt") || strings.Contains(line, "middle.txt") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected older files first when sorting by oldest, got: %v", lines)
+		}
+	}
+}
+
+func TestLargestSorting(t *testing.T) {
+	// Create temporary directory
+	tmpDir, err := ioutil.TempDir("", "newestfiles_test_largest")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create test files
+	createTestFiles(t, tmpDir)
+
+	// Change to test directory
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldDir)
+
+	// Run the program with -l flag
+	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"), "-l", ".go", ".txt")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to run program: %v", err)
+	}
+
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+
+	// The largest file (large.txt) should be first
+	if len(lines) > 0 && !strings.Contains(lines[0], "large.txt") {
+		t.Errorf("Expected large.txt first when sorting by largest, got: %s", lines[0])
+	}
+}
+
+func TestSmallestSorting(t *testing.T) {
+	// Create temporary directory
+	tmpDir, err := ioutil.TempDir("", "newestfiles_test_smallest")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create test files
+	createTestFiles(t, tmpDir)
+
+	// Change to test directory
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldDir)
+
+	// Run the program with -s flag
+	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"), "-s", ".go", ".txt")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to run program: %v", err)
+	}
+
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+
+	// The smallest file (small.go) should be first
+	if len(lines) > 0 && !strings.Contains(lines[0], "small.go") {
+		t.Errorf("Expected small.go first when sorting by smallest, got: %s", lines[0])
+	}
+}
+
+func TestConflictingSortFlags(t *testing.T) {
+	oldDir, _ := os.Getwd()
+
+	// Test conflicting flags -o and -l
+	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"), "-o", "-l", ".go")
+	output, err := cmd.Output()
+	if err != nil {
+		// This is expected to fail, but we want to check the output
+		if exitError, ok := err.(*exec.ExitError); ok {
+			output = exitError.Stderr
+		}
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Only one sort option") {
+		t.Errorf("Expected error message about conflicting sort options, got: %s", outputStr)
 	}
 }

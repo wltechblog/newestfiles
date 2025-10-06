@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,22 +15,46 @@ import (
 type FileInfo struct {
 	Path    string
 	ModTime time.Time
+	Size    int64
 }
 
 func main() {
 	// Define command line flags
 	jsonOutput := flag.Bool("j", false, "output in JSON format")
+	oldest := flag.Bool("o", false, "Sort oldest to newest")
+	largest := flag.Bool("l", false, "Sort by largest files first")
+	smallest := flag.Bool("s", false, "Sort by smallest files first")
 	flag.Parse()
 
 	// Get suffix arguments from command line (after flags)
 	suffixes := flag.Args()
 
+	// Check for conflicting sort flags
+	sortFlags := 0
+	if *oldest {
+		sortFlags++
+	}
+	if *largest {
+		sortFlags++
+	}
+	if *smallest {
+		sortFlags++
+	}
+	if sortFlags > 1 {
+		fmt.Println("Error: Only one sort option can be specified at a time")
+		return
+	}
+
 	// If no suffixes provided, show usage
 	if len(suffixes) == 0 {
-		fmt.Println("Usage: newestfiles [-j] <suffix1> [suffix2] ...")
+		fmt.Println("Usage: newestfiles [-j] [-o|-l|-s] <suffix1> [suffix2] ...")
 		fmt.Println("  -j    output in JSON format (default: plain text)")
+		fmt.Println("  -o    sort oldest to newest (default: newest first)")
+		fmt.Println("  -l    sort by largest files first")
+		fmt.Println("  -s    sort by smallest files first")
 		fmt.Println("Example: newestfiles .txt .go .md")
 		fmt.Println("Example: newestfiles -j .txt .go .md")
+		fmt.Println("Example: newestfiles -l .txt .go .md")
 		return
 	}
 
@@ -45,7 +70,7 @@ func main() {
 	// Walk through current directory and subdirectories
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf("Error accessing %s: %v\n", path, err)
+			log.Printf("Error accessing %s: %v\n", path, err)
 			return nil // Continue walking despite errors
 		}
 
@@ -60,6 +85,7 @@ func main() {
 				files = append(files, FileInfo{
 					Path:    path,
 					ModTime: info.ModTime(),
+					Size:    info.Size(),
 				})
 				break // Found a match, no need to check other suffixes
 			}
@@ -69,7 +95,7 @@ func main() {
 	})
 
 	if err != nil {
-		fmt.Printf("Error walking directory: %v\n", err)
+		log.Printf("Error walking directory: %v\n", err)
 		return
 	}
 
@@ -78,10 +104,28 @@ func main() {
 		return
 	}
 
-	// Sort files by modification time in descending order (newest first)
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].ModTime.After(files[j].ModTime)
-	})
+	// Sort files based on the selected option
+	if *oldest {
+		// Sort oldest to newest (ascending by modification time)
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].ModTime.Before(files[j].ModTime)
+		})
+	} else if *largest {
+		// Sort by largest files first (descending by size)
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].Size > files[j].Size
+		})
+	} else if *smallest {
+		// Sort by smallest files first (ascending by size)
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].Size < files[j].Size
+		})
+	} else {
+		// Default: Sort by newest first (descending by modification time)
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].ModTime.After(files[j].ModTime)
+		})
+	}
 
 	// Output the sorted list
 	if *jsonOutput {

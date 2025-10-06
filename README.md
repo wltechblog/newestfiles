@@ -5,7 +5,11 @@ A command-line tool to find and list files by extension, sorted by modification 
 ## Features
 
 - Find files by extension(s) in current directory and subdirectories
-- Sort files by modification time (newest first)
+- Multiple sorting options:
+  - By modification time (newest first - default)
+  - By modification time (oldest first)
+  - By file size (largest first)
+  - By file size (smallest first)
 - Support for multiple file extensions
 - Case-insensitive extension matching
 - Two output formats: plain text (default) and JSON
@@ -14,11 +18,20 @@ A command-line tool to find and list files by extension, sorted by modification 
 ## Usage
 
 ```bash
-# Plain text output (default)
+# Plain text output (default - newest first)
 newestfiles .go .txt .md
 
-# JSON output
-newestfiles -j .go .txt .md
+# Sort by oldest files first
+newestfiles -o .go .txt .md
+
+# Sort by largest files first
+newestfiles -l .go .txt .md
+
+# Sort by smallest files first
+newestfiles -s .go .txt .md
+
+# JSON output with size sorting
+newestfiles -j -l .go .txt .md
 
 # Extensions without dots are automatically normalized
 newestfiles go txt md
@@ -27,6 +40,11 @@ newestfiles go txt md
 ### Command Line Options
 
 - `-j`: Output in JSON format (default: plain text)
+- `-o`: Sort by oldest files first (default: newest first)
+- `-l`: Sort by largest files first
+- `-s`: Sort by smallest files first
+
+**Note:** Only one sorting option can be used at a time.
 
 ## Examples
 
@@ -68,7 +86,9 @@ make clean
 The project includes comprehensive tests covering:
 - Plain text vs JSON output
 - File filtering by extension
-- Sorting by modification time
+- Sorting by modification time (newest/oldest)
+- Sorting by file size (largest/smallest)
+- Conflicting sort flag validation
 - Edge cases (no files found, no arguments)
 - Case-insensitive matching
 - Extension normalization

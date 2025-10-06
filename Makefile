@@ -63,6 +63,21 @@ run-example: build
 run-json: build
 	./$(BUILD_DIR)/$(BINARY_NAME) -j .go .txt
 
+# Run the program with largest files first
+.PHONY: run-largest
+run-largest: build
+	./$(BUILD_DIR)/$(BINARY_NAME) -l .go .txt
+
+# Run the program with smallest files first
+.PHONY: run-smallest
+run-smallest: build
+	./$(BUILD_DIR)/$(BINARY_NAME) -s .go .txt
+
+# Run the program with oldest files first
+.PHONY: run-oldest
+run-oldest: build
+	./$(BUILD_DIR)/$(BINARY_NAME) -o .go .txt
+
 # Help target
 .PHONY: help
 help:
@@ -77,4 +92,7 @@ help:
 	@echo "  clean         - Clean build artifacts"
 	@echo "  run-example   - Run with example arguments"
 	@echo "  run-json      - Run with JSON output"
+	@echo "  run-largest   - Run with largest files first"
+	@echo "  run-smallest  - Run with smallest files first"
+	@echo "  run-oldest    - Run with oldest files first"
 	@echo "  help          - Show this help message"
