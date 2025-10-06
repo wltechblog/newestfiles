@@ -45,20 +45,7 @@ func main() {
 		return
 	}
 
-	// If no suffixes provided, show usage
-	if len(suffixes) == 0 {
-		fmt.Println("Usage: newestfiles [-j] [-o|-l|-s] <suffix1> [suffix2] ...")
-		fmt.Println("  -j    output in JSON format (default: plain text)")
-		fmt.Println("  -o    sort oldest to newest (default: newest first)")
-		fmt.Println("  -l    sort by largest files first")
-		fmt.Println("  -s    sort by smallest files first")
-		fmt.Println("Example: newestfiles .txt .go .md")
-		fmt.Println("Example: newestfiles -j .txt .go .md")
-		fmt.Println("Example: newestfiles -l .txt .go .md")
-		return
-	}
-
-	// Normalize suffixes to ensure they start with a dot
+	// Normalize suffixes to ensure they start with a dot (if any suffixes provided)
 	for i, suffix := range suffixes {
 		if !strings.HasPrefix(suffix, ".") {
 			suffixes[i] = "." + suffix
@@ -79,15 +66,25 @@ func main() {
 			return nil
 		}
 
-		// Check if file has one of the target suffixes
-		for _, suffix := range suffixes {
-			if strings.HasSuffix(strings.ToLower(info.Name()), strings.ToLower(suffix)) {
-				files = append(files, FileInfo{
-					Path:    path,
-					ModTime: info.ModTime(),
-					Size:    info.Size(),
-				})
-				break // Found a match, no need to check other suffixes
+		// Check if file has one of the target suffixes, or include all files if no suffixes specified
+		if len(suffixes) == 0 {
+			// No suffixes specified, include all files
+			files = append(files, FileInfo{
+				Path:    path,
+				ModTime: info.ModTime(),
+				Size:    info.Size(),
+			})
+		} else {
+			// Check if file has one of the target suffixes
+			for _, suffix := range suffixes {
+				if strings.HasSuffix(strings.ToLower(info.Name()), strings.ToLower(suffix)) {
+					files = append(files, FileInfo{
+						Path:    path,
+						ModTime: info.ModTime(),
+						Size:    info.Size(),
+					})
+					break // Found a match, no need to check other suffixes
+				}
 			}
 		}
 
@@ -100,7 +97,11 @@ func main() {
 	}
 
 	if len(files) == 0 {
-		fmt.Println("No files found with the specified suffixes.")
+		if len(suffixes) == 0 {
+			fmt.Println("No files found.")
+		} else {
+			fmt.Println("No files found with the specified suffixes.")
+		}
 		return
 	}
 

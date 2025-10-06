@@ -1,10 +1,10 @@
 # newestfiles
 
-A command-line tool to find and list files by extension, sorted by modification time (newest first).
+A command-line tool to find and list files by extension (or all files), sorted by modification time (newest first).
 
 ## Features
 
-- Find files by extension(s) in current directory and subdirectories
+- Find files by extension(s) in current directory and subdirectories, or all files if no extensions specified
 - Multiple sorting options:
   - By modification time (newest first - default)
   - By modification time (oldest first)
@@ -18,7 +18,10 @@ A command-line tool to find and list files by extension, sorted by modification 
 ## Usage
 
 ```bash
-# Plain text output (default - newest first)
+# List all files (newest first)
+newestfiles
+
+# Plain text output with specific extensions (newest first)
 newestfiles .go .txt .md
 
 # Sort by oldest files first
@@ -35,6 +38,9 @@ newestfiles -j -l .go .txt .md
 
 # Extensions without dots are automatically normalized
 newestfiles go txt md
+
+# List all files with JSON output
+newestfiles -j
 ```
 
 ### Command Line Options
@@ -66,19 +72,14 @@ $ newestfiles -j .go .txt
 
 ```bash
 # Build the binary
-make build
+go build
 
 # Run tests
-make test
-
-# Run all checks (format, vet, test)
-make check
+go test
 
 # Install to GOPATH/bin
-make install
+go install
 
-# Clean build artifacts
-make clean
 ```
 
 ## Testing
@@ -95,13 +96,6 @@ The project includes comprehensive tests covering:
 
 Run tests with:
 ```bash
-make test
+go test
 ```
 
-## Development
-
-- Format code: `make fmt`
-- Run linter: `make vet`
-- Generate coverage report: `make test-coverage`
-- Run example: `make run-example`
-# newestfiles

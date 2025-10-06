@@ -144,21 +144,40 @@ func TestJSONOutput(t *testing.T) {
 }
 
 func TestNoSuffixesProvided(t *testing.T) {
-	oldDir, _ := os.Getwd()
+	// Create temporary directory
+	tmpDir, err := ioutil.TempDir("", "newestfiles_test_no_suffix")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
 
-	// Run the program without any arguments
+	// Create test files
+	createTestFiles(t, tmpDir)
+
+	// Change to test directory
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldDir)
+
+	// Run the program without any arguments (should include all files)
 	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"))
 	output, err := cmd.Output()
 	if err != nil {
-		// This is expected to fail, but we want to check the output
-		if exitError, ok := err.(*exec.ExitError); ok {
-			output = exitError.Stderr
-		}
+		t.Fatalf("Failed to run program: %v", err)
 	}
 
-	outputStr := string(output)
-	if !strings.Contains(outputStr, "Usage:") {
-		t.Errorf("Expected usage message, got: %s", outputStr)
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+
+	// Should have all 7 files created by createTestFiles
+	expectedCount := 7 // newest.go, middle.txt, oldest.md, other.py, another.go, large.txt, small.go
+	if len(lines) != expectedCount {
+		t.Errorf("Expected %d files, got %d. Output: %s", expectedCount, len(lines), outputStr)
+	}
+
+	// Check that newest.go is first (newest file)
+	if lines[0] != "newest.go" {
+		t.Errorf("Expected newest.go first, got %s", lines[0])
 	}
 }
 
@@ -371,6 +390,48 @@ func TestSmallestSorting(t *testing.T) {
 	// The smallest file (small.go) should be first
 	if len(lines) > 0 && !strings.Contains(lines[0], "small.go") {
 		t.Errorf("Expected small.go first when sorting by smallest, got: %s", lines[0])
+	}
+}
+
+func TestJSONOutputAllFiles(t *testing.T) {
+	// Create temporary directory
+	tmpDir, err := ioutil.TempDir("", "newestfiles_test_json_all")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create test files
+	createTestFiles(t, tmpDir)
+
+	// Change to test directory
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(oldDir)
+
+	// Run the program with -j flag and no suffixes
+	cmd := exec.Command(filepath.Join(oldDir, "newestfiles_test_binary"), "-j")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to run program: %v", err)
+	}
+
+	// Parse JSON output
+	var files []string
+	err = json.Unmarshal(output, &files)
+	if err != nil {
+		t.Fatalf("Failed to parse JSON output: %v. Output: %s", err, string(output))
+	}
+
+	// Should have all 7 files
+	expectedCount := 7
+	if len(files) != expectedCount {
+		t.Errorf("Expected %d files, got %d. Files: %v", expectedCount, len(files), files)
+	}
+
+	// Check that newest.go is first
+	if files[0] != "newest.go" {
+		t.Errorf("Expected newest.go first, got %s", files[0])
 	}
 }
 
