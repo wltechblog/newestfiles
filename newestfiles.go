@@ -24,6 +24,7 @@ func main() {
 	oldest := flag.Bool("o", false, "Sort oldest to newest")
 	largest := flag.Bool("l", false, "Sort by largest files first")
 	smallest := flag.Bool("s", false, "Sort by smallest files first")
+	verbose := flag.Bool("v", false, "verbose output (show file sizes)")
 	flag.Parse()
 
 	// Get suffix arguments from command line (after flags)
@@ -109,22 +110,34 @@ func main() {
 	if *oldest {
 		// Sort oldest to newest (ascending by modification time)
 		sort.Slice(files, func(i, j int) bool {
-			return files[i].ModTime.Before(files[j].ModTime)
+			if !files[i].ModTime.Equal(files[j].ModTime) {
+				return files[i].ModTime.Before(files[j].ModTime)
+			}
+			return files[i].Path < files[j].Path
 		})
 	} else if *largest {
 		// Sort by largest files first (descending by size)
 		sort.Slice(files, func(i, j int) bool {
-			return files[i].Size > files[j].Size
+			if files[i].Size != files[j].Size {
+				return files[i].Size > files[j].Size
+			}
+			return files[i].Path < files[j].Path
 		})
 	} else if *smallest {
 		// Sort by smallest files first (ascending by size)
 		sort.Slice(files, func(i, j int) bool {
-			return files[i].Size < files[j].Size
+			if files[i].Size != files[j].Size {
+				return files[i].Size < files[j].Size
+			}
+			return files[i].Path < files[j].Path
 		})
 	} else {
 		// Default: Sort by newest first (descending by modification time)
 		sort.Slice(files, func(i, j int) bool {
-			return files[i].ModTime.After(files[j].ModTime)
+			if !files[i].ModTime.Equal(files[j].ModTime) {
+				return files[i].ModTime.After(files[j].ModTime)
+			}
+			return files[i].Path < files[j].Path
 		})
 	}
 
@@ -140,7 +153,11 @@ func main() {
 	} else {
 		// Plain text output (default)
 		for _, file := range files {
-			fmt.Println(file.Path)
+			if *verbose {
+				fmt.Printf("%s (%d bytes)\n", file.Path, file.Size)
+			} else {
+				fmt.Println(file.Path)
+			}
 		}
 	}
 }

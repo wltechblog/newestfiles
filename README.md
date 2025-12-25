@@ -33,6 +33,9 @@ newestfiles -l .go .txt .md
 # Sort by smallest files first
 newestfiles -s .go .txt .md
 
+# Verbose output (show file sizes)
+newestfiles -l -v .go .txt .md
+
 # JSON output with size sorting
 newestfiles -j -l .go .txt .md
 
@@ -49,6 +52,7 @@ newestfiles -j
 - `-o`: Sort by oldest files first (default: newest first)
 - `-l`: Sort by largest files first
 - `-s`: Sort by smallest files first
+- `-v`: Verbose output (show file sizes)
 
 **Note:** Only one sorting option can be used at a time.
 
